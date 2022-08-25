@@ -2,7 +2,7 @@ use crossterm::Result;
 use figlet_rs::FIGfont;
 use std::io::stdout;
 use std::{thread, time};
-use thread::sleep;
+use std::time::Duration;
 
 use crate::timechunk::TimeChunk;
 use crate::timetext::TimeText;
@@ -26,21 +26,22 @@ impl Timer {
         let mut timetext = TimeText::new(String::from(""), thick_font);
         self.time.print_timetext(&stdo, &mut timetext)?;
 
-        // Here we are adding on one half second, so that the user
-        // can see the starting time.
-        sleep(time::Duration::from_secs_f64(0.5));
-        let current_time = time::Instant::now();
-        let mut seconds_elapsed = 0;
-        while self.time.duration >= current_time.elapsed() {
-            if current_time.elapsed().as_secs() >= seconds_elapsed {
-                seconds_elapsed += 1;
-                // We have this if statement as a special check so that
-                // we never will end up with a negative duration.
-                if self.time.duration >= current_time.elapsed() {
-                    let print_time = self.time.duration - current_time.elapsed();
-                    TimeChunk::new(print_time).print_timetext(&stdo, &mut timetext)?;
-                }
-            }
+        let start_time = time::Instant::now();
+        let mut current_time = start_time;
+        let mut elapsed = Duration::new(0, 0);
+        while elapsed < self.time.duration {
+            // figure out the next time to sleep until
+            let next_wake = start_time + Duration::from_secs(elapsed.as_secs() + 1);
+            let sleep_duration = next_wake - current_time;
+
+            // let sleep_duration = Duration::milliseconds(250);
+            thread::sleep(sleep_duration);
+
+            current_time = time::Instant::now();
+            elapsed = current_time - start_time;
+
+            let print_time = if elapsed > self.time.duration { Duration::default() } else { self.time.duration - elapsed + Duration::new(1, 0) };
+            TimeChunk::new(print_time).print_timetext(&stdo, &mut timetext)?;
         }
 
         // Swipe the terminal one last time, and move the cursor to back to the
