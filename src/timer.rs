@@ -44,6 +44,9 @@ impl Timer {
             TimeChunk::new(print_time).print_timetext(&stdo, &mut timetext)?;
         }
 
+        // let the final 0s display briefly
+        thread::sleep(Duration::from_millis(250));
+
         // Swipe the terminal one last time, and move the cursor to back to the
         // beginning of the terminal window.
         TimeChunk::wipe_terminal(&stdo)?;
