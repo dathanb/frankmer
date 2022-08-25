@@ -1,4 +1,4 @@
-use crossterm::{style, QueueableCommand, Result};
+use crossterm::{style, QueueableCommand};
 use std::io::stdout;
 use std::io::Write;
 
@@ -7,6 +7,8 @@ use clap::{App, Arg};
 use regex::Regex;
 
 use crate::timer::Timer;
+#[cfg(feature = "mac-notification")]
+use crate::notifier::Notifier;
 
 static TIME_HELP: &'static str = "The time used to initialize the timer with.
 This must be the time separated by spaces describing the
@@ -36,12 +38,17 @@ impl TimeCLI {
         }
     }
 
-    pub fn run_interface(&mut self) -> Result<()> {
+    pub fn run_interface(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.gen_user_interface();
 
         if self.non_empty() {
             let mut t = Timer::new(self.hours, self.minutes, self.seconds);
             t.countdown()?;
+            #[cfg(feature = "mac-notification")]
+            {
+                let notifier = Notifier::new();
+                notifier.send_notification()?;
+            }
         } else {
             let mut stdo = stdout();
             stdo.queue(style::SetForegroundColor(style::Color::Red))?;
